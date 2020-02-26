@@ -11,22 +11,25 @@ use winit::event_loop::{EventLoop, ControlFlow};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
-pub trait EventRunner {
-    fn on_update(self, delta: f32, input: &WinitInputHelper);
-    fn on_draw(self, surface: &mut surface::Surface);
+use std::time::Instant;
+
+#[derive(Copy, Clone)]
+pub struct EventRunner {
+    update: fn(f32, &input::Input),
+    draw: fn(&mut surface::Surface)
 }
 
-pub struct Pixels16<'a> {
+pub struct Pixels16 {
     surface: surface::Surface,
     input: input::Input,
-    event_runner: &'a dyn EventRunner,
+    event_runner: EventRunner,
     event_loop: EventLoop<()>,
     winit_input: WinitInputHelper,
     window: winit::window::Window
 }
 
-impl<'a> Pixels16<'a> {
-    pub fn new(window_title: &'static str, event_runner: &'a dyn EventRunner) -> Result<Pixels16<'a>, Error> {
+impl Pixels16 {
+    pub fn new(window_title: &'static str, event_runner: EventRunner) -> Result<Pixels16, Error> {
         let event_loop = EventLoop::new();
 
         let window = {
@@ -63,12 +66,21 @@ impl<'a> Pixels16<'a> {
         let mut local_winit_input = self.winit_input;
         let mut local_surface = self.surface;
         let mut local_input = self.input;
-        //let local_window = self.window;
+
+        let draw_func = self.event_runner.draw;
+        let update_func = self.event_runner.update;
+
+        let local_window = self.window;
+
+        let mut last_frame = Instant::now();
 
         self.event_loop.run(move |event, _, control_flow| {
             match event {
                 Event::RedrawRequested(_) => {
-                    //self.event_runner.on_draw(&mut local_surface);
+                    let delta_time = (Instant::now() - last_frame).as_micros() as f32 / 1000.0;
+
+                    update_func(delta_time, &local_input);
+                    draw_func(&mut local_surface);
                 }
                 _ => { }
             }
@@ -86,7 +98,7 @@ impl<'a> Pixels16<'a> {
                 local_input.update(input::Key::X, local_winit_input.key_held(VirtualKeyCode::A));
                 local_input.update(input::Key::Y, local_winit_input.key_held(VirtualKeyCode::Y));
 
-                //local_window.request_redraw();
+                local_window.request_redraw();
             }
         });
     }
