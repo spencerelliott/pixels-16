@@ -6,7 +6,7 @@ use constants::{SURFACE_HEIGHT, SURFACE_WIDTH};
 
 use pixels::{wgpu::Surface, Error, Pixels, SurfaceTexture};
 use winit::dpi::LogicalSize;
-use winit::event::{Event, VirtualKeyCode, WindowEvent};
+use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
@@ -28,6 +28,12 @@ pub struct Pixels16<G: Game + 'static> {
 }
 
 impl<G: Game> Pixels16<G> {
+    /// Constructs a new `Pixel16` instance with the specified title and game
+    /// 
+    /// # Arguments
+    /// 
+    /// * `window_title` - The text to display in the title bar of the window
+    /// * `game` - A struct that implements the `Game` trait
     pub fn new(window_title: &'static str, game: Box<G>) -> Result<Pixels16<G>, Error> {
         let event_loop = EventLoop::new();
 
@@ -36,17 +42,16 @@ impl<G: Game> Pixels16<G> {
             WindowBuilder::new()
                 .with_title(window_title)
                 .with_inner_size(size)
+                .with_resizable(false)
                 .build(&event_loop)
                 .unwrap()
         };
 
-        let scale_factor = window.scale_factor();
-
         let pixels = {
             let surface = Surface::create(&window);
             let surface_texture = SurfaceTexture::new(
-                (SURFACE_WIDTH as f64 * scale_factor) as u32,
-                (SURFACE_HEIGHT as f64 * scale_factor) as u32,
+                SURFACE_WIDTH,
+                SURFACE_HEIGHT,
                 surface,
             );
             Pixels::new(SURFACE_WIDTH, SURFACE_HEIGHT, surface_texture)?
@@ -123,13 +128,5 @@ impl<G: Game> Pixels16<G> {
                 local_window.request_redraw();
             }
         });
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
     }
 }
